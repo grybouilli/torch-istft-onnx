@@ -46,7 +46,7 @@ To get started; install poetry:
 ## Known issues
 
 * Fixed in #2d1269c2: Mismatch with `torch.istft` output in the last `hop_length` samples
-
+* Fixed in #af7c23d9: Slow onnx export
 
 ## License
 
