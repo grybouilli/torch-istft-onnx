@@ -52,16 +52,17 @@ class ISTFT(torch.nn.Module):
         fft_window = pad_center(fft_window, target_length=n_fft)
         # window the bases
         inverse_basis *= fft_window
-        window_sum = window_sumsquare(
-            fft_window,
-            max_frames,
-            hop_length=self.hop_length,
-            win_length=self.win_length,
-            n_fft=self.n_fft,
-        )
+        # window_sum = window_sumsquare(
+        #     fft_window,
+        #     max_frames,
+        #     hop_length=self.hop_length,
+        #     win_length=self.win_length,
+        #     n_fft=self.n_fft,
+        # )
         # self.register_buffer("forward_basis", forward_basis.float())
         self.register_buffer("inverse_basis", inverse_basis.float(), persistent=False)
-        self.register_buffer("window_sum", window_sum, persistent=False)
+        self.register_buffer("window_sum_window", fft_window.float(), persistent=False)
+        # self.register_buffer("window_sum", window_sum, persistent=False)
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         """
@@ -84,9 +85,18 @@ class ISTFT(torch.nn.Module):
             padding=0,
         )
         win_dim = inverse_transform.size(-1)
-        window_sum_valid = self.window_sum[:win_dim].to(device)
+        # window_sum_valid = self.window_sum[:win_dim].to(device)
         # remove modulation effects
-        inverse_transform = inverse_transform / (window_sum_valid + EPSILON)
+        n_frames_actual = (win_dim - self.n_fft) // self.hop_length + 1
+        window_sum_actual = window_sumsquare(
+            self.window_sum_window,
+            n_frames_actual,
+            hop_length=self.hop_length,
+            win_length=self.win_length,
+            n_fft=self.n_fft,
+        ).to(device)
+        inverse_transform = inverse_transform / (window_sum_actual[:win_dim] + EPSILON)
+        # inverse_transform = inverse_transform / (window_sum_valid + EPSILON)
         inverse_transform = inverse_transform.squeeze(dim=1)
         inverse_transform *= float(self.n_fft) / self.hop_length
 
