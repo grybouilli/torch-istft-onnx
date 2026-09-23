@@ -45,7 +45,7 @@ To get started; install poetry:
 
 ## Known issues
 
-* Mismatch with `torch.istft` output in the last `hop_length` samples.
+* Fixed in #2d1269c2: Mismatch with `torch.istft` output in the last `hop_length` samples
 
 
 ## License
