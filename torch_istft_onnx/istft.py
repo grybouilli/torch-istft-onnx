@@ -18,7 +18,6 @@ class ISTFT(torch.nn.Module):
         win_length: Optional[int] = None,
         window: Optional[torch.Tensor] = None,
         normalized: bool = False,
-        max_frames: int = MAX_FRAMES,
     ):
         """
         Implementation of inverse Short-Time Fourier Transform (ISTFT) in PyTorch
@@ -101,7 +100,7 @@ def window_sumsquare(
     window: Optional[torch.Tensor] = None,
     n_frames: int = MAX_FRAMES,
     hop_length: int = 512,
-    win_length: int = 2048,
+    win_length: int = None,
     n_fft: int = 2048,
 ) -> torch.Tensor:
     """
@@ -126,15 +125,19 @@ def window_sumsquare(
     x : torch.Tensor, shape=`(n_fft + hop_length * (n_frames - 1))`
         The sum-squared envelope of the window function
     """
-    win_sq = pad_center(window**2, target_length=n_fft)
+    win_lt = n_fft
+    if win_length is not None:
+        win_lt = win_length
+
+    win_sq = pad_center(window**2, target_length=win_lt)
     # Shape: (1, n_fft, n_frames) — each frame is the same win_sq
-    win_sq_frames = win_sq.unsqueeze(0).unsqueeze(-1).expand(1, n_fft, n_frames)
+    win_sq_frames = win_sq.unsqueeze(0).unsqueeze(-1).expand(1, win_lt, n_frames)
     # F.fold does exactly the overlap-add we need
-    n = n_fft + hop_length * (n_frames - 1)
+    n = win_lt + hop_length * (n_frames - 1)
     result = F.fold(
-        win_sq_frames.reshape(1, n_fft, n_frames),
+        win_sq_frames.reshape(1, win_lt, n_frames),
         output_size=(1, n),
-        kernel_size=(1, n_fft),
+        kernel_size=(1, win_lt),
         stride=(1, hop_length),
     )
     return result.squeeze()
