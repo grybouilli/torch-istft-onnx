@@ -50,7 +50,7 @@ if __name__ == "__main__":
         output_names=["y"],
         dynamic_axes={"x": {0: "batch_size", 1: "sample_length"}},
         export_params=True,
-        opset_version=17,
-        verbose=False,
+        opset_version=18,
+        verbose=True,
     )
     print("Done")

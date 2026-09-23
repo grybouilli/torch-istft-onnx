@@ -126,22 +126,18 @@ def window_sumsquare(
     x : torch.Tensor, shape=`(n_fft + hop_length * (n_frames - 1))`
         The sum-squared envelope of the window function
     """
-    if win_length is None:
-        win_length = n_fft
-    win_sq = window
-    if win_sq is None:
-        win_sq = torch.ones(win_length)
+    win_sq = pad_center(window**2, target_length=n_fft)
+    # Shape: (1, n_fft, n_frames) — each frame is the same win_sq
+    win_sq_frames = win_sq.unsqueeze(0).unsqueeze(-1).expand(1, n_fft, n_frames)
+    # F.fold does exactly the overlap-add we need
     n = n_fft + hop_length * (n_frames - 1)
-    x = torch.zeros((n,))
-
-    win_sq = win_sq**2
-    win_sq = pad_center(win_sq, target_length=n_fft, axis=-1)
-
-    # Fill the envelope
-    for i in range(n_frames):
-        sample = i * hop_length
-        x[sample : min(n, sample + n_fft)] += win_sq[: max(0, min(n_fft, n - sample))]
-    return x
+    result = F.fold(
+        win_sq_frames.reshape(1, n_fft, n_frames),
+        output_size=(1, n),
+        kernel_size=(1, n_fft),
+        stride=(1, hop_length),
+    )
+    return result.squeeze()
 
 
 def pad_center(data: torch.Tensor, target_length: int, axis: int = -1, pad_value: float = 0) -> torch.Tensor:
